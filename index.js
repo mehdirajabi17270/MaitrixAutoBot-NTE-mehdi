@@ -16,16 +16,22 @@ const AZUSD_ADDRESS = process.env.AZUSD_ADDRESS;
 const VANAUSD_ADDRESS = process.env.VANAUSD_ADDRESS;
 const AUSD_ADDRESS = process.env.AUSD_ADDRESS;
 const VUSD_ADDRESS = process.env.VUSD_ADDRESS;
+const OG_ADDRESS = "0xFBBDAb7684A4Da0CFAE67C5c13fA73402008953e";
+const OUSD_ADDRESS = "0xD23016Fd7154d9A6F2830Bfb4eA3F3106AAE0E88";
+const USD1_ADDRESS = "0x16a8A3624465224198d216b33E825BcC3B80abf7";
 const ROUTER_ADDRESS_AUSD = "0x2cFDeE1d5f04dD235AEA47E1aD2fB66e3A61C13e";
 const ROUTER_ADDRESS_VUSD = "0x3dCACa90A714498624067948C092Dd0373f08265";
 const ROUTER_ADDRESS_AZUSD = "0xB0b53d8B4ef06F9Bbe5db624113C6A5D35bB7522";
 const ROUTER_ADDRESS_VANAUSD = "0xEfbAE3A68b17a61f21C7809Edfa8Aa3CA7B2546f";
+const ROUTER_ADDRESS_OUSD = "0x0b4301877A981e7808A8F4B6E277C376960C7641";
 const STAKING_ADDRESS_AZUSD = "0xf45Fde3F484C44CC35Bdc2A7fCA3DDDe0C8f252E";
 const STAKING_ADDRESS_VANAUSD = "0x2608A88219BFB34519f635Dd9Ca2Ae971539ca60";
 const STAKING_ADDRESS_VUSD = "0x5bb9Fa02a3DCCDB4E9099b48e8Ba5841D2e59d51";
 const STAKING_ADDRESS_AUSD = "0x054de909723ECda2d119E31583D40a52a332f85c";
 const STAKING_ADDRESS_LULUSD = "0x5De3fBd40D4c3892914c3b67b5B529D776A1483A";
 const STAKING_ADDRESS_USDE = "0x3988053b7c748023a1aE19a8ED4c1Bf217932bDB";
+const STAKING_ADDRESS_OUSD = "0xF8F951DA83dAC732A2dCF207B644E493484047eB";
+const STAKING_ADDRESS_USD1 = "0x7799841734Ac448b8634F1c1d7522Bc8887A7bB9";
 const NETWORK_NAME = "Arbitrum Sepolia";
 const DEBUG_MODE = false;
 
@@ -111,6 +117,14 @@ const TOKEN_CONFIG = {
     outputTokenAddress: VANAUSD_ADDRESS,
     inputTokenName: "VANA",
     minAmount: 0.2
+  },
+  OUSD: {
+    routerAddress: ROUTER_ADDRESS_OUSD,
+    selector: "0xa6d67510",
+    inputTokenAddress: OG_ADDRESS,
+    outputTokenAddress: OUSD_ADDRESS,
+    inputTokenName: "0G",
+    minAmount: 1
   }
 };
 
@@ -162,6 +176,22 @@ const STAKING_CONFIG = {
     minAmount: 0.0001,
     requiresTransferFeeCheck: true,
     requiresTokenFunction: true
+  },
+  OUSD: {
+    stakingAddress: STAKING_ADDRESS_OUSD,
+    tokenAddress: OUSD_ADDRESS,
+    tokenName: "0USD",
+    minAmount: 0.0001,
+    requiresTransferFeeCheck: true,
+    requiresTokenFunction: true
+  },
+  USD1: {
+    stakingAddress: STAKING_ADDRESS_USD1,
+    tokenAddress: USD1_ADDRESS,
+    tokenName: "USD1",
+    minAmount: 0.0001,
+    requiresTransferFeeCheck: true,
+    requiresTokenFunction: true
   }
 };
 
@@ -172,6 +202,8 @@ const FAUCET_APIS = {
   Ai16Z: "https://app.x-network.io/maitrix-ai16z/faucet",
   Virtual: "https://app.x-network.io/maitrix-virtual/faucet",
   Vana: "https://app.x-network.io/maitrix-vana/faucet",
+  USD1: "https://app.x-network.io/maitrix-usd1/faucet",
+  OG: "https://app.x-network.io/maitrix-0g/faucet"
 };
 
 let walletInfo = {
@@ -187,6 +219,9 @@ let walletInfo = {
   balanceVanausd: "0.00",
   balanceAusd: "0.00",
   balanceVusd: "0.00",
+  balanceOg: "0.00",
+  balanceOusd: "0.00",
+  balanceUsd1: "0.00",
   network: NETWORK_NAME,
   status: "Initializing",
 };
@@ -467,7 +502,7 @@ autoMintSubMenu.hide();
 function getAutoMintMenuItems() {
   let items = [];
   if (actionRunning) items.push("Stop Transaction");
-  items = items.concat(["Auto Mint AUSD", "Auto Mint vUSD", "Auto Mint VANAUSD", "Auto Mint azUSD", "Clear Transaction Logs", "Refresh", "Back to Main Menu"]);
+  items = items.concat(["Auto Mint AUSD", "Auto Mint vUSD", "Auto Mint VANAUSD", "Auto Mint azUSD", "Auto Mint 0USD", "Clear Transaction Logs", "Refresh", "Back to Main Menu"]);
   return items;
 }
 
@@ -507,7 +542,7 @@ autoStakeSubMenu.hide();
 function getAutoStakeMenuItems() {
   let items = [];
   if (actionRunning) items.push("Stop Transaction");
-  items = items.concat(["Auto Stake azUSD", "Auto Stake AUSD", "Auto Stake VANAUSD", "Auto Stake vUSD", "Auto Stake USDe", "Auto Stake LULUSD", "Clear Transaction Logs", "Refresh", "Back to Main Menu"]);
+  items = items.concat(["Auto Stake azUSD", "Auto Stake AUSD", "Auto Stake VANAUSD", "Auto Stake vUSD", "Auto Stake USDe", "Auto Stake LULUSD", "Auto Stake 0USD", "Auto Stake USD1", "Clear Transaction Logs", "Refresh", "Back to Main Menu"]);
   return items;
 }
 
@@ -595,16 +630,50 @@ async function updateWalletData() {
 
     const ethBalance = await provider.getBalance(wallet.address);
     walletInfo.balanceEth = ethers.formatEther(ethBalance);
-    walletInfo.balanceAth = await getTokenBalance(ATH_ADDRESS);
-    walletInfo.balanceAi16z = await getTokenBalance(AI16Z_ADDRESS);
-    walletInfo.balanceUsde = await getTokenBalance(USDE_ADDRESS);
-    walletInfo.balanceVana = await getTokenBalance(VANA_ADDRESS);
-    walletInfo.balanceVirtual = await getTokenBalance(VIRTUAL_ADDRESS);
-    walletInfo.balanceLulusd = await getTokenBalance(LULUSD_ADDRESS);
-    walletInfo.balanceAzusd = await getTokenBalance(AZUSD_ADDRESS);
-    walletInfo.balanceVanausd = await getTokenBalance(VANAUSD_ADDRESS);
-    walletInfo.balanceAusd = await getTokenBalance(AUSD_ADDRESS);
-    walletInfo.balanceVusd = await getTokenBalance(VUSD_ADDRESS);
+
+    const tokenAddresses = [
+      ATH_ADDRESS,
+      AI16Z_ADDRESS,
+      USDE_ADDRESS,
+      VANA_ADDRESS,
+      VIRTUAL_ADDRESS,
+      LULUSD_ADDRESS,
+      AZUSD_ADDRESS,
+      VANAUSD_ADDRESS,
+      AUSD_ADDRESS,
+      VUSD_ADDRESS,
+      OG_ADDRESS,
+      OUSD_ADDRESS,
+      USD1_ADDRESS,
+    ];
+
+    const balancePromises = tokenAddresses.map(async (address) => {
+      try {
+        const contract = new ethers.Contract(address, ERC20ABI, provider);
+        const balance = await contract.balanceOf(wallet.address);
+        const decimals = await contract.decimals();
+        return ethers.formatUnits(balance, decimals);
+      } catch (error) {
+        addLog(`Gagal mengambil saldo token ${address}: ${error.message}`, "error");
+        return "0";
+      }
+    });
+
+    const balances = await Promise.all(balancePromises);
+
+    walletInfo.balanceAth = balances[0];
+    walletInfo.balanceAi16z = balances[1];
+    walletInfo.balanceUsde = balances[2];
+    walletInfo.balanceVana = balances[3];
+    walletInfo.balanceVirtual = balances[4];
+    walletInfo.balanceLulusd = balances[5];
+    walletInfo.balanceAzusd = balances[6];
+    walletInfo.balanceVanausd = balances[7];
+    walletInfo.balanceAusd = balances[8];
+    walletInfo.balanceVusd = balances[9];
+    walletInfo.balanceOg = balances[10];
+    walletInfo.balanceOusd = balances[11];
+    walletInfo.balanceUsd1 = balances[12];
 
     updateWallet();
     addLog("Wallet Information Updated !!", "system");
@@ -612,6 +681,7 @@ async function updateWalletData() {
     addLog("Gagal mengambil data wallet: " + error.message, "system");
   }
 }
+
 
 function updateWallet() {
   const shortAddress = walletInfo.address ? getShortAddress(walletInfo.address) : "N/A";
@@ -626,6 +696,9 @@ function updateWallet() {
   const vanausd = walletInfo.balanceVanausd ? Number(walletInfo.balanceVanausd).toFixed(4) : "0.0000";
   const ausd = walletInfo.balanceAusd ? Number(walletInfo.balanceAusd).toFixed(4) : "0.0000";
   const vusd = walletInfo.balanceVusd ? Number(walletInfo.balanceVusd).toFixed(4) : "0.0000";
+  const og = walletInfo.balanceOg ? Number(walletInfo.balanceOg).toFixed(4) : "0.0000";
+  const ousd = walletInfo.balanceOusd ? Number(walletInfo.balanceOusd).toFixed(4) : "0.0000";
+  const usd1 = walletInfo.balanceUsd1 ? Number(walletInfo.balanceUsd1).toFixed(4) : "0.0000";
 
   const content = ` Address: {bright-yellow-fg}${shortAddress}{/bright-yellow-fg}
  ETH    : {bright-green-fg}${eth.padStart(8)}{/bright-green-fg} | azUSD  : {bright-green-fg}${azusd.padStart(8)}{/bright-green-fg}
@@ -633,7 +706,9 @@ function updateWallet() {
  Ai16Z  : {bright-green-fg}${ai16z.padStart(8)}{/bright-green-fg} | aUSD   : {bright-green-fg}${ausd.padStart(8)}{/bright-green-fg}
  USDE   : {bright-green-fg}${usde.padStart(8)}{/bright-green-fg} | vUSD   : {bright-green-fg}${vusd.padStart(8)}{/bright-green-fg}
  Vana   : {bright-green-fg}${vana.padStart(8)}{/bright-green-fg} | LULUSD : {bright-green-fg}${lulusd.padStart(8)}{/bright-green-fg}
- Virtual: {bright-green-fg}${virtual.padStart(8)}{/bright-green-fg} | Network: {bright-cyan-fg}${NETWORK_NAME}{/bright-cyan-fg}`;
+ Virtual: {bright-green-fg}${virtual.padStart(8)}{/bright-green-fg} | 0G     : {bright-green-fg}${og.padStart(8)}{/bright-green-fg}
+ 0USD   : {bright-green-fg}${ousd.padStart(8)}{/bright-green-fg} | USD1   : {bright-green-fg}${usd1.padStart(8)}{/bright-green-fg}
+ Network: {bright-cyan-fg}${NETWORK_NAME}{/bright-cyan-fg}`;
   walletBox.setContent(content);
   safeRender();
 }
@@ -644,6 +719,15 @@ function secondsToHoursMinutes(seconds) {
   return `${hours} jam ${minutes} menit`;
 }
 
+function generateRandomUserAgent() {
+  const userAgents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 OPR/119.0.0.0 (Edition cdf)",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0",
+  ];
+  return userAgents[Math.floor(Math.random() * userAgents.length)];
+}
+
 async function claimFaucet(token) {
   const apiUrl = FAUCET_APIS[token];
   if (!apiUrl) {
@@ -652,8 +736,18 @@ async function claimFaucet(token) {
 
   const headers = {
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
-    Origin: "https://app.testnet.themaitrix.ai",
+    "User-Agent": generateRandomUserAgent(),
+    "Authorization": "Bearer",
+    "Pragma": "no-cache",
+    "Priority": "u=1, i",
+    "Sec-Ch-Ua": '"Chromium";v="134", "Not:A-Brand";v="24", "Opera";v="119"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Dest": "cross-site",
+    "Origin": "https://app.testnet.themaitrix.ai",
+    "Referer": "https://app.testnet.themaitrix.ai/",
   };
 
   const payload = {
@@ -1019,7 +1113,7 @@ async function runAutoStake(token) {
 
 async function runAutoClaimAllFaucet() {
   addLog("Memulai Auto Claim All Faucet...", "system");
-  const tokens = ["ATH", "USDe", "LULUSD", "Ai16Z", "Virtual", "Vana"];
+  const tokens = ["ATH", "USDe", "LULUSD", "Ai16Z", "Virtual", "Vana", "USD1", "OG"];
   actionRunning = true;
   actionCancelled = false;
   mainMenu.setItems(getMainMenuItems());
@@ -1109,6 +1203,12 @@ autoMintSubMenu.on("select", (item) => {
     } else {
       runAutoMint("AZUSD");
     }
+  } else if (selected === "Auto Mint 0USD") {
+    if (actionRunning) {
+      addLog("Transaksi sedang berjalan. Hentikan transaksi terlebih dahulu.", "warning");
+    } else {
+      runAutoMint("OUSD");
+    }
   } else if (selected === "Stop Transaction") {
     if (actionRunning) {
       actionCancelled = true;
@@ -1196,6 +1296,18 @@ autoStakeSubMenu.on("select", (item) => {
       addLog("Transaksi sedang berjalan. Hentikan transaksi terlebih dahulu.", "warning");
     } else {
       runAutoStake("LULUSD");
+    }
+  } else if (selected === "Auto Stake 0USD") {
+    if (actionRunning) {
+      addLog("Transaksi sedang berjalan. Hentikan transaksi terlebih dahulu.", "warning");
+    } else {
+      runAutoStake("OUSD");
+    }
+  } else if (selected === "Auto Stake USD1") {
+    if (actionRunning) {
+      addLog("Transaksi sedang berjalan. Hentikan transaksi terlebih dahulu.", "warning");
+    } else {
+      runAutoStake("USD1");
     }
   } else if (selected === "Stop Transaction") {
     if (actionRunning) {
